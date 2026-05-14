@@ -332,24 +332,24 @@ void genQuadIndices_unaligned(uint16_t* dst, uint32_t n, uint16_t firstVertexID)
 void batchTransformTextQuads(const float* __restrict quads, uint32_t n, const float* __restrict mtx, float* __restrict transformedVertices)
 {
 #if VG_CONFIG_ENABLE_SIMD
-	const bx::simd128_t mtx0 = bx::simd_splat(mtx[0]);
-	const bx::simd128_t mtx1 = bx::simd_splat(mtx[1]);
-	const bx::simd128_t mtx2 = bx::simd_splat(mtx[2]);
-	const bx::simd128_t mtx3 = bx::simd_splat(mtx[3]);
-	const bx::simd128_t mtx4 = bx::simd_splat(mtx[4]);
-	const bx::simd128_t mtx5 = bx::simd_splat(mtx[5]);
+	const bx::simd128_t mtx0 = bx::simd128_splat(mtx[0]);
+	const bx::simd128_t mtx1 = bx::simd128_splat(mtx[1]);
+	const bx::simd128_t mtx2 = bx::simd128_splat(mtx[2]);
+	const bx::simd128_t mtx3 = bx::simd128_splat(mtx[3]);
+	const bx::simd128_t mtx4 = bx::simd128_splat(mtx[4]);
+	const bx::simd128_t mtx5 = bx::simd128_splat(mtx[5]);
 
 	const uint32_t iter = n >> 1; // 2 quads per iteration
 	for (uint32_t i = 0; i < iter; ++i) {
-		bx::simd128_t q0 = bx::simd_ld(quads);     // (x0, y0, x1, y1)
-		bx::simd128_t q1 = bx::simd_ld(quads + 8); // (x2, y2, x3, y3)
+		bx::simd128_t q0 = bx::simd128_ld(quads);     // (x0, y0, x1, y1)
+		bx::simd128_t q1 = bx::simd128_ld(quads + 8); // (x2, y2, x3, y3)
 
-		bx::simd128_t x0123 = bx::simd_shuf_xyAB(bx::simd_swiz_xzxz(q0), bx::simd_swiz_xzxz(q1)); // (x0, x1, x2, x3)
-		bx::simd128_t y0123 = bx::simd_shuf_xyAB(bx::simd_swiz_ywyw(q0), bx::simd_swiz_ywyw(q1)); // (y0, y1, y2, y3)
-		bx::simd128_t x0123_m0 = bx::simd_mul(x0123, mtx0); // (x0, x1, x2, x3) * mtx[0]
-		bx::simd128_t x0123_m1 = bx::simd_mul(x0123, mtx1); // (x0, x1, x2, x3) * mtx[1]
-		bx::simd128_t y0123_m2 = bx::simd_mul(y0123, mtx2); // (y0, y1, y2, y3) * mtx[2]
-		bx::simd128_t y0123_m3 = bx::simd_mul(y0123, mtx3); // (y0, y1, y2, y3) * mtx[3]
+		bx::simd128_t x0123 = bx::simd128_x32_shuf_xyAB(bx::simd128_x32_swiz_xzxz(q0), bx::simd128_x32_swiz_xzxz(q1)); // (x0, x1, x2, x3)
+		bx::simd128_t y0123 = bx::simd128_x32_shuf_xyAB(bx::simd128_x32_swiz_ywyw(q0), bx::simd128_x32_swiz_ywyw(q1)); // (y0, y1, y2, y3)
+		bx::simd128_t x0123_m0 = bx::simd128_f32_mul(x0123, mtx0); // (x0, x1, x2, x3) * mtx[0]
+		bx::simd128_t x0123_m1 = bx::simd128_f32_mul(x0123, mtx1); // (x0, x1, x2, x3) * mtx[1]
+		bx::simd128_t y0123_m2 = bx::simd128_f32_mul(y0123, mtx2); // (y0, y1, y2, y3) * mtx[2]
+		bx::simd128_t y0123_m3 = bx::simd128_f32_mul(y0123, mtx3); // (y0, y1, y2, y3) * mtx[3]
 
 		// v0.x = x0_m0 + y0_m2 + m4
 		// v1.x = x1_m0 + y0_m2 + m4
@@ -359,16 +359,16 @@ void batchTransformTextQuads(const float* __restrict quads, uint32_t n, const fl
 		// v1.y = x1_m1 + y0_m3 + m5
 		// v2.y = x1_m1 + y1_m3 + m5
 		// v3.y = x0_m1 + y1_m3 + m5
-		bx::simd128_t x0110_m0 = bx::simd_swiz_xyyx(x0123_m0);
-		bx::simd128_t x0110_m1 = bx::simd_swiz_xyyx(x0123_m1);
-		bx::simd128_t y0011_m2 = bx::simd_swiz_xxyy(y0123_m2);
-		bx::simd128_t y0011_m3 = bx::simd_swiz_xxyy(y0123_m3);
+		bx::simd128_t x0110_m0 = bx::simd128_x32_swiz_xyyx(x0123_m0);
+		bx::simd128_t x0110_m1 = bx::simd128_x32_swiz_xyyx(x0123_m1);
+		bx::simd128_t y0011_m2 = bx::simd128_x32_swiz_xxyy(y0123_m2);
+		bx::simd128_t y0011_m3 = bx::simd128_x32_swiz_xxyy(y0123_m3);
 
-		bx::simd128_t v0123_x = bx::simd_add(x0110_m0, bx::simd_add(y0011_m2, mtx4));
-		bx::simd128_t v0123_y = bx::simd_add(x0110_m1, bx::simd_add(y0011_m3, mtx5));
+		bx::simd128_t v0123_x = bx::simd128_f32_add(x0110_m0, bx::simd128_f32_add(y0011_m2, mtx4));
+		bx::simd128_t v0123_y = bx::simd128_f32_add(x0110_m1, bx::simd128_f32_add(y0011_m3, mtx5));
 
-		bx::simd128_t v01 = bx::simd_swiz_xzyw(bx::simd_shuf_xyAB(v0123_x, v0123_y));
-		bx::simd128_t v23 = bx::simd_swiz_xzyw(bx::simd_shuf_zwCD(v0123_x, v0123_y));
+		bx::simd128_t v01 = bx::simd128_x32_swiz_xzyw(bx::simd128_x32_shuf_xyAB(v0123_x, v0123_y));
+		bx::simd128_t v23 = bx::simd128_x32_swiz_xzyw(bx::simd128_x32_shuf_zwCD(v0123_x, v0123_y));
 
 		bx::simd_st(transformedVertices, v01);
 		bx::simd_st(transformedVertices + 4, v23);
@@ -381,16 +381,16 @@ void batchTransformTextQuads(const float* __restrict quads, uint32_t n, const fl
 		// v5.y = x3_m1 + y2_m3 + m5
 		// v6.y = x3_m1 + y3_m3 + m5
 		// v7.y = x2_m1 + y3_m3 + m5
-		bx::simd128_t x2332_m0 = bx::simd_swiz_zwwz(x0123_m0);
-		bx::simd128_t x2332_m1 = bx::simd_swiz_zwwz(x0123_m1);
-		bx::simd128_t y2233_m2 = bx::simd_swiz_zzww(y0123_m2);
-		bx::simd128_t y2233_m3 = bx::simd_swiz_zzww(y0123_m3);
+		bx::simd128_t x2332_m0 = bx::simd128_x32_swiz_zwwz(x0123_m0);
+		bx::simd128_t x2332_m1 = bx::simd128_x32_swiz_zwwz(x0123_m1);
+		bx::simd128_t y2233_m2 = bx::simd128_x32_swiz_zzww(y0123_m2);
+		bx::simd128_t y2233_m3 = bx::simd128_x32_swiz_zzww(y0123_m3);
 
-		bx::simd128_t v4567_x = bx::simd_add(x2332_m0, bx::simd_add(y2233_m2, mtx4));
-		bx::simd128_t v4567_y = bx::simd_add(x2332_m1, bx::simd_add(y2233_m3, mtx5));
+		bx::simd128_t v4567_x = bx::simd128_f32_add(x2332_m0, bx::simd128_f32_add(y2233_m2, mtx4));
+		bx::simd128_t v4567_y = bx::simd128_f32_add(x2332_m1, bx::simd128_f32_add(y2233_m3, mtx5));
 
-		bx::simd128_t v45 = bx::simd_swiz_xzyw(bx::simd_shuf_xyAB(v4567_x, v4567_y));
-		bx::simd128_t v67 = bx::simd_swiz_xzyw(bx::simd_shuf_zwCD(v4567_x, v4567_y));
+		bx::simd128_t v45 = bx::simd128_x32_swiz_xzyw(bx::simd128_x32_shuf_xyAB(v4567_x, v4567_y));
+		bx::simd128_t v67 = bx::simd128_x32_swiz_xzyw(bx::simd128_x32_shuf_zwCD(v4567_x, v4567_y));
 
 		bx::simd_st(transformedVertices + 8, v45);
 		bx::simd_st(transformedVertices + 12, v67);
@@ -401,14 +401,14 @@ void batchTransformTextQuads(const float* __restrict quads, uint32_t n, const fl
 
 	const uint32_t rem = n & 1;
 	if (rem) {
-		bx::simd128_t q0 = bx::simd_ld(quads);
+		bx::simd128_t q0 = bx::simd128_ld(quads);
 
-		bx::simd128_t x0101 = bx::simd_swiz_xzxz(q0); // (x0, x1, x0, x1)
-		bx::simd128_t y0101 = bx::simd_swiz_ywyw(q0); // (y0, y1, y0, y1)
-		bx::simd128_t x0101_m0 = bx::simd_mul(x0101, mtx0); // (x0, x1, x0, x1) * mtx[0]
-		bx::simd128_t x0101_m1 = bx::simd_mul(x0101, mtx1); // (x0, x1, x0, x1) * mtx[1]
-		bx::simd128_t y0101_m2 = bx::simd_mul(y0101, mtx2); // (y0, y1, y0, y1) * mtx[2]
-		bx::simd128_t y0101_m3 = bx::simd_mul(y0101, mtx3); // (y0, y1, y0, y1) * mtx[3]
+		bx::simd128_t x0101 = bx::simd128_x32_swiz_xzxz(q0); // (x0, x1, x0, x1)
+		bx::simd128_t y0101 = bx::simd128_x32_swiz_ywyw(q0); // (y0, y1, y0, y1)
+		bx::simd128_t x0101_m0 = bx::simd128_f32_mul(x0101, mtx0); // (x0, x1, x0, x1) * mtx[0]
+		bx::simd128_t x0101_m1 = bx::simd128_f32_mul(x0101, mtx1); // (x0, x1, x0, x1) * mtx[1]
+		bx::simd128_t y0101_m2 = bx::simd128_f32_mul(y0101, mtx2); // (y0, y1, y0, y1) * mtx[2]
+		bx::simd128_t y0101_m3 = bx::simd128_f32_mul(y0101, mtx3); // (y0, y1, y0, y1) * mtx[3]
 
 		// v0.x = x0_m0 + y0_m2 + m4
 		// v1.x = x1_m0 + y0_m2 + m4
@@ -418,16 +418,16 @@ void batchTransformTextQuads(const float* __restrict quads, uint32_t n, const fl
 		// v1.y = x1_m1 + y0_m3 + m5
 		// v2.y = x1_m1 + y1_m3 + m5
 		// v3.y = x0_m1 + y1_m3 + m5
-		bx::simd128_t x0110_m0 = bx::simd_swiz_xyyx(x0101_m0);
-		bx::simd128_t x0110_m1 = bx::simd_swiz_xyyx(x0101_m1);
-		bx::simd128_t y0011_m2 = bx::simd_swiz_xxyy(y0101_m2);
-		bx::simd128_t y0011_m3 = bx::simd_swiz_xxyy(y0101_m3);
+		bx::simd128_t x0110_m0 = bx::simd128_x32_swiz_xyyx(x0101_m0);
+		bx::simd128_t x0110_m1 = bx::simd128_x32_swiz_xyyx(x0101_m1);
+		bx::simd128_t y0011_m2 = bx::simd128_x32_swiz_xxyy(y0101_m2);
+		bx::simd128_t y0011_m3 = bx::simd128_x32_swiz_xxyy(y0101_m3);
 
-		bx::simd128_t v0123_x = bx::simd_add(x0110_m0, bx::simd_add(y0011_m2, mtx4));
-		bx::simd128_t v0123_y = bx::simd_add(x0110_m1, bx::simd_add(y0011_m3, mtx5));
+		bx::simd128_t v0123_x = bx::simd128_f32_add(x0110_m0, bx::simd128_f32_add(y0011_m2, mtx4));
+		bx::simd128_t v0123_y = bx::simd128_f32_add(x0110_m1, bx::simd128_f32_add(y0011_m3, mtx5));
 
-		bx::simd128_t v01 = bx::simd_swiz_xzyw(bx::simd_shuf_xyAB(v0123_x, v0123_y));
-		bx::simd128_t v23 = bx::simd_swiz_xzyw(bx::simd_shuf_zwCD(v0123_x, v0123_y));
+		bx::simd128_t v01 = bx::simd128_x32_swiz_xzyw(bx::simd128_x32_shuf_xyAB(v0123_x, v0123_y));
+		bx::simd128_t v23 = bx::simd128_x32_swiz_xzyw(bx::simd128_x32_shuf_zwCD(v0123_x, v0123_y));
 
 		bx::simd_st(transformedVertices, v01);
 		bx::simd_st(transformedVertices + 4, v23);

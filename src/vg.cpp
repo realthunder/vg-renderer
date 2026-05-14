@@ -2,11 +2,11 @@
 // - More than 254 clip regions: Either use another view (extra parameter in createContext)
 // or draw a fullscreen quad to reset the stencil buffer to 0.
 // - Recycle the memory of cached meshes so resetting a cached mesh is faster.
-// - Find a way to move stroker operations into separate functions (i.e. all strokePath 
+// - Find a way to move stroker operations into separate functions (i.e. all strokePath
 // functions differ only on the createDrawCommand_XXX() call; strokerXXX calls are the same
 // and the code is duplicated).
 // - Allow strokes and fills with gradients and image patterns to be used as clip masks (might
-// be useful if the same command list is used both inside and outside a beginClip()/endClip() 
+// be useful if the same command list is used both inside and outside a beginClip()/endClip()
 // block)
 #include <vg/vg.h>
 #include <vg/path.h>
@@ -101,11 +101,11 @@ struct DrawCommand
 {
 	struct Type
 	{
-		// NOTE: Originally there were only 3 types of commands, Textured, ColorGradient and Clip. 
+		// NOTE: Originally there were only 3 types of commands, Textured, ColorGradient and Clip.
 		// In order to be able to support int16 UVs *and* repeatable image patterns (which require UVs
 		// outside the [0, 1) range), a separate type of command has been added for image patterns.
 		// The vertex shader of ImagePattern command calculates UVs the same way the gradient shader
-		// calculates the gradient factor. 
+		// calculates the gradient factor.
 		// The idea is that when using multiple image patterns, a new draw call will always be created
 		// for each image, so there's little harm in changing shader program as well (?!?). In other words,
 		// 2 paths with different image patterns wouldn't have been batched together either way.
@@ -183,7 +183,7 @@ struct CommandType
 		MoveTo,
 		LineTo,
 		CubicTo,
-		QuadraticTo, 
+		QuadraticTo,
 		ArcTo,
 		Arc,
 		Rect,
@@ -203,7 +203,7 @@ struct CommandType
 		StrokePathColor,
 		StrokePathGradient,
 		StrokePathImagePattern,
-		
+
 		FirstStrokerCommand = FillPathColor,
 		LastStrokerCommand = StrokePathImagePattern,
 
@@ -791,7 +791,7 @@ Context* createContext(bx::AllocatorI* allocator, const ContextConfig* userCfg)
 #endif
 
 	// NOTE: A couple of shaders can be shared between programs. Since bgfx
-	// cares only whether the program handle changed and not (at least the D3D11 backend 
+	// cares only whether the program handle changed and not (at least the D3D11 backend
 	// doesn't check shader handles), there's little point in complicating this atm.
 	bgfx::RendererType::Enum bgfxRendererType = bgfx::getRendererType();
 	ctx->m_ProgramHandle[DrawCommand::Type::Textured] = bgfx::createProgram(
@@ -819,7 +819,7 @@ Context* createContext(bx::AllocatorI* allocator, const ContextConfig* userCfg)
 	ctx->m_ExtentRadiusFeatherUniform = bgfx::createUniform("u_extentRadiusFeather", bgfx::UniformType::Vec4, 1);
 	ctx->m_InnerColorUniform = bgfx::createUniform("u_innerCol", bgfx::UniformType::Vec4, 1);
 	ctx->m_OuterColorUniform = bgfx::createUniform("u_outerCol", bgfx::UniformType::Vec4, 1);
-	
+
 	// FontStash
 	// Init font stash
 	const bgfx::Caps* caps = bgfx::getCaps();
@@ -850,7 +850,7 @@ Context* createContext(bx::AllocatorI* allocator, const ContextConfig* userCfg)
 
 	ctx->m_FontImages[0] = createImage(ctx, (uint16_t)fontParams.width, (uint16_t)fontParams.height, cfg->m_FontAtlasImageFlags, nullptr);
 	VG_CHECK(isValid(ctx->m_FontImages[0]), "Failed to initialize font texture");
-	
+
 	ctx->m_FontImageID = 0;
 	updateWhitePixelUV(ctx);
 
@@ -1101,7 +1101,7 @@ void end(Context* ctx)
 	for (uint32_t iVB = ctx->m_FirstVertexBufferID; iVB < numVertexBuffers; ++iVB) {
 		VertexBuffer* vb = &ctx->m_VertexBuffers[iVB];
 		GPUVertexBuffer* gpuvb = &ctx->m_GPUVertexBuffers[iVB];
-		
+
 		const uint32_t maxVBVertices = ctx->m_Config.m_MaxVBVertices;
 		if (!bgfx::isValid(gpuvb->m_PosBufferHandle)) {
 			gpuvb->m_PosBufferHandle = bgfx::createDynamicVertexBuffer(maxVBVertices, ctx->m_PosVertexDecl, 0);
@@ -1199,7 +1199,7 @@ void end(Context* ctx)
 						| BGFX_STENCIL_OP_FAIL_Z_REPLACE
 						| BGFX_STENCIL_OP_PASS_Z_REPLACE, BGFX_STENCIL_NONE);
 
-					// TODO: Check if it's better to use Type_TexturedVertexColor program here to avoid too many 
+					// TODO: Check if it's better to use Type_TexturedVertexColor program here to avoid too many
 					// state switches.
 					bgfx::submit(viewID, ctx->m_ProgramHandle[DrawCommand::Type::Clip]);
 				}
@@ -1957,7 +1957,7 @@ int textBreakLines(Context* ctx, const TextConfig& cfg, const char* str, const c
 		case 0x00a0:	// NBSP
 			type = CP_SPACE;
 			break;
-		case 32:		// space 
+		case 32:		// space
 			// JD: Treat spaces as regular characters in order to be able to have pre and post spaces in an edit box.
 			if (flags & TextBoxFlags::KeepSpaces) {
 				type = CP_CHAR;
@@ -3947,7 +3947,7 @@ static void ctxPopState(Context* ctx)
 	VG_CHECK(ctx->m_StateStackTop > 0, "State stack underflow");
 	--ctx->m_StateStackTop;
 
-	// If the new state has a different scissor rect than the last draw command 
+	// If the new state has a different scissor rect than the last draw command
 	// force creating a new command.
 	const uint32_t numDrawCommands = ctx->m_NumDrawCommands;
 	if (numDrawCommands != 0) {
@@ -4334,7 +4334,7 @@ static void ctxSubmitCommandList(Context* ctx, CommandListHandle handle)
 		cmd += kAlignedCommandHeaderSize;
 
 		const uint8_t* nextCmd = cmd + cmdHeader->m_Size;
-		
+
 		if (skipCmds && cmdHeader->m_Type >= CommandType::FirstStrokerCommand && cmdHeader->m_Type <= CommandType::LastStrokerCommand) {
 			cmd = nextCmd;
 			continue;
@@ -4549,7 +4549,7 @@ static void ctxSubmitCommandList(Context* ctx, CommandListHandle handle)
 		case CommandType::IntersectScissor: {
 			const float* rect = (float*)cmd;
 			cmd += sizeof(float) * 4;
-			
+
 			const bool zeroRect = !ctxIntersectScissor(ctx, rect[0], rect[1], rect[2], rect[3]);
 			if (cullCmds) {
 				skipCmds = zeroRect;
@@ -5335,7 +5335,7 @@ static uint32_t allocVertices(Context* ctx, uint32_t numVertices, uint32_t* vbID
 	}
 
 	*vbID = (uint32_t)(vb - ctx->m_VertexBuffers);
-	
+
 	const uint32_t firstVertexID = vb->m_Count;
 	vb->m_Count += numVertices;
 	return firstVertexID;
@@ -5347,7 +5347,7 @@ static uint32_t allocIndices(Context* ctx, uint32_t numIndices)
 	if (ib->m_Count + numIndices > ib->m_Capacity) {
 		const uint32_t nextCapacity = ib->m_Capacity != 0 ? (ib->m_Capacity * 3) / 2 : 32;
 
-		ib->m_Capacity = bx::uint32_max(nextCapacity, ib->m_Count + numIndices);
+		ib->m_Capacity = bx::max<uint32_t>(nextCapacity, ib->m_Count + numIndices);
 		ib->m_Indices = (uint16_t*)bx::alignedRealloc(ctx->m_Allocator, ib->m_Indices, sizeof(uint16_t) * ib->m_Capacity, 16);
 	}
 
@@ -5370,8 +5370,8 @@ static DrawCommand* allocDrawCommand(Context* ctx, uint32_t numVertices, uint32_
 
 		VG_CHECK(prevCmd->m_VertexBufferID == vertexBufferID, "Cannot merge draw commands with different vertex buffers");
 		VG_CHECK(prevCmd->m_ScissorRect[0] == (uint16_t)scissor[0]
-		      && prevCmd->m_ScissorRect[1] == (uint16_t)scissor[1] 
-		      && prevCmd->m_ScissorRect[2] == (uint16_t)scissor[2] 
+		      && prevCmd->m_ScissorRect[1] == (uint16_t)scissor[1]
+		      && prevCmd->m_ScissorRect[2] == (uint16_t)scissor[2]
 		      && prevCmd->m_ScissorRect[3] == (uint16_t)scissor[3], "Invalid scissor rect");
 
 		if (prevCmd->m_Type == type && prevCmd->m_HandleID == handle) {
@@ -5411,7 +5411,7 @@ static DrawCommand* allocClipCommand(Context* ctx, uint32_t numVertices, uint32_
 	uint32_t vertexBufferID;
 	const uint32_t firstVertexID = allocVertices(ctx, numVertices, &vertexBufferID);
 	const uint32_t firstIndexID = allocIndices(ctx, numIndices);
-	
+
 	const State* state = getState(ctx);
 	const float* scissor = state->m_ScissorRect;
 
@@ -5419,9 +5419,9 @@ static DrawCommand* allocClipCommand(Context* ctx, uint32_t numVertices, uint32_
 		DrawCommand* prevCmd = &ctx->m_ClipCommands[ctx->m_NumClipCommands - 1];
 
 		VG_CHECK(prevCmd->m_VertexBufferID == vertexBufferID, "Cannot merge clip commands with different vertex buffers");
-		VG_CHECK(prevCmd->m_ScissorRect[0] == (uint16_t)scissor[0] 
-		      && prevCmd->m_ScissorRect[1] == (uint16_t)scissor[1] 
-		      && prevCmd->m_ScissorRect[2] == (uint16_t)scissor[2] 
+		VG_CHECK(prevCmd->m_ScissorRect[0] == (uint16_t)scissor[0]
+		      && prevCmd->m_ScissorRect[1] == (uint16_t)scissor[1]
+		      && prevCmd->m_ScissorRect[2] == (uint16_t)scissor[2]
 		      && prevCmd->m_ScissorRect[3] == (uint16_t)scissor[3], "Invalid scissor rect");
 		VG_CHECK(prevCmd->m_Type == DrawCommand::Type::Clip, "Invalid draw command type");
 
@@ -5475,7 +5475,7 @@ static ImageHandle allocImage(Context* ctx)
 	if (handle.idx >= ctx->m_ImageCapacity) {
 		const uint32_t oldCapacity = ctx->m_ImageCapacity;
 
-		ctx->m_ImageCapacity = bx::uint32_min(bx::uint32_max(ctx->m_ImageCapacity + 4, handle.idx + 1),
+		ctx->m_ImageCapacity = bx::min<uint32_t>(bx::max<uint32_t>(ctx->m_ImageCapacity + 4, handle.idx + 1),
 																				  ctx->m_Config.m_MaxImages);
 		ctx->m_Images = (Image*)bx::realloc(ctx->m_Allocator, ctx->m_Images, sizeof(Image) * ctx->m_ImageCapacity);
 		if (!ctx->m_Images) {
@@ -5820,7 +5820,7 @@ static void addCachedCommand(Context* ctx, const float* pos, uint32_t numVertice
 	uint8_t* mem = (uint8_t*)bx::alignedAlloc(allocator, totalMem, 16);
 	mesh->m_Pos = (float*)mem;
 	mem += alignSize(sizeof(float) * 2 * numVertices, 16);
-	
+
 	const float* invMtx = cache->m_Commands[cache->m_NumCommands - 1].m_InvTransformMtx;
 	vgutil::batchTransformPositions(pos, numVertices, mesh->m_Pos, invMtx);
 	mesh->m_NumVertices = numVertices;
@@ -5840,7 +5840,7 @@ static void addCachedCommand(Context* ctx, const float* pos, uint32_t numVertice
 	mesh->m_NumIndices = numIndices;
 }
 
-// Walk the command list; avoid Path commands and use CachedMesh(es) on Stroker commands. 
+// Walk the command list; avoid Path commands and use CachedMesh(es) on Stroker commands.
 // Everything else (state, clip, text) is executed similarly to the uncached version (see submitCommandList).
 static void clCacheRender(Context* ctx, CommandList* cl)
 {
@@ -5852,7 +5852,7 @@ static void clCacheRender(Context* ctx, CommandList* cl)
 
 	CommandListCache* clCache = cl->m_Cache;
 	VG_CHECK(clCache != nullptr, "No CommandListCache in CommandList; this function shouldn't have been called!");
-	
+
 	const uint16_t firstGradientID = (uint16_t)ctx->m_NextGradientID;
 	const uint16_t firstImagePatternID = (uint16_t)ctx->m_NextImagePatternID;
 	VG_CHECK(firstGradientID + numGradients <= ctx->m_Config.m_MaxGradients, "Not enough free gradients for command list. Increase ContextConfig::m_MaxGradients");
@@ -6158,7 +6158,7 @@ static void submitCachedMesh(Context* ctx, Color col, const CachedMesh* meshList
 
 			const uint32_t* colors = mesh->m_Colors ? mesh->m_Colors : &col;
 			const uint32_t numColors = mesh->m_Colors ? numVertices : 1;
-			
+
 			vgutil::batchTransformPositions(mesh->m_Pos, numVertices, transformedVertices, mtx);
 			createDrawCommand_VertexColor(ctx, transformedVertices, numVertices, colors, numColors, mesh->m_Indices, mesh->m_NumIndices);
 		}
