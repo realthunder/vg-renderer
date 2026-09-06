@@ -13,12 +13,17 @@
 #   ./rebake.sh ../../../../../build/<cfg>/src/3rdParty/bgfx/cmake/bgfx/shaderc \
 #               ../../../bgfx/bgfx/src
 #
-# Profiles: the same set bgfx bakes for its own embedded shaders, minus
-# the two that need a Windows host compiler (dxbc s_5_0, dxil s_6_0).
-# A consumer on any platform where bgfx's embedded_shader.h expects
-# those arrays must define BGFX_PLATFORM_SUPPORTS_DXBC=0 (and _DXIL=0)
-# before including the headers; on Linux FreeCAD's CMake does that, and
-# its bgfx backend never selects Direct3D anyway.
+# Profiles: the same set bgfx bakes for its own embedded shaders. Two of
+# them, dxbc (s_5_0) and dxil (s_6_0), need a shaderc built on Windows,
+# which is where it can reach D3DCompile and DXC; a Linux run leaves
+# those two arrays out of the headers it writes.
+#
+# That is not cosmetic. bgfx picks Direct3D 11 by default on Windows,
+# createEmbeddedShader then finds no entry for the running renderer and
+# returns an invalid handle -- and bgfx substitutes program handle 0 for
+# an invalid program rather than refusing the draw, so the frame comes
+# out drawn by an unrelated program instead of failing loudly. Rebake on
+# Windows, or the headers you commit are blind there.
 
 set -e
 
@@ -40,11 +45,15 @@ bake() { # <type> <base>
                 "android 100_es essl" \
                 "linux spirv spv" \
                 "linux wgsl wgsl" \
+                "windows s_5_0 dxbc" \
+                "windows s_6_0 dxil" \
                 "ios metal mtl"; do
         set -- $prof
         plat=$1; p=$2; suffix=$3
         opt=""
-        [ "$suffix" = mtl ] && opt="-O 3"
+        case "$suffix" in
+            mtl|dxbc|dxil) opt="-O 3";;
+        esac
         "$SHADERC" --type "$type" --platform "$plat" -p "$p" $opt \
             -i "$BGFXSRC" -f "$base.sc" -o "$TMP" --bin2c "${base}_${suffix}"
         cat "$TMP" >> "$out"
